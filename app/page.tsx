@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -21,6 +21,83 @@ export default function Home() {
 
   const [formData, setFormData] = useState<{item:string,amount:number,qty?:number}>({item:'',amount:0});
   const [editingId, setEditingId] = useState<number | null>(null);
+
+  // Electron integration
+  useEffect(() => {
+    // Check if we're running in Electron
+    if (typeof window !== 'undefined' && window.electronAPI) {
+      // Listen for menu actions from Electron
+      window.electronAPI.onMenuAction((event, action) => {
+        switch (action) {
+          case 'new-sale':
+            setFormData({item:'',amount:0});
+            setEditingId(null);
+            setModalOpen(true);
+            break;
+          case 'dashboard':
+            setActivePage('Dashboard');
+            break;
+          case 'pos':
+            setActivePage('POS');
+            break;
+          case 'inventory':
+            setActivePage('Inventory');
+            break;
+          case 'toggle-sidebar':
+            setSidebarOpen(!sidebarOpen);
+            break;
+          case 'about':
+            alert('AgriPOS v1.0.0\nPoint of Sale System for Agriculture\nDeveloped by Ahmed');
+            break;
+        }
+      });
+
+      // Cleanup listeners on unmount
+      return () => {
+        window.electronAPI.removeAllListeners('menu-action');
+      };
+    }
+  }, [sidebarOpen]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only handle shortcuts when not in input fields
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      if (event.ctrlKey || event.metaKey) {
+        switch (event.key) {
+          case '1':
+            event.preventDefault();
+            setActivePage('Dashboard');
+            break;
+          case '2':
+            event.preventDefault();
+            setActivePage('POS');
+            break;
+          case '3':
+            event.preventDefault();
+            setActivePage('Inventory');
+            break;
+          case 'b':
+            event.preventDefault();
+            setSidebarOpen(!sidebarOpen);
+            break;
+          case 'n':
+            event.preventDefault();
+            setFormData({item:'',amount:0});
+            setEditingId(null);
+            setModalOpen(true);
+            break;
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [sidebarOpen]);
 
   const renderContent = () => {
     if(activePage==='Dashboard'){
